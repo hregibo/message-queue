@@ -23,7 +23,7 @@
   },
   "homepage": "https://gitlab.com/hregibo/message-queue#readme",
   "dependencies": {
-      "bunyan": "^1.8.12",
+      "bunyan": "^1.8.12"
   },
   "devDependencies": {
       "@types/bunyan": "^1.8.6",

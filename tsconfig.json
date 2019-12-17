@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "outDir": "./lib",
+        "allowJs": false,
+        "target": "es2017",
+        "module": "commonjs",
+        "esModuleInterop": false,
+        "sourceMap": true,
+        "checkJs": false,
+        "declaration": true,
+        "declarationMap": true,
+        "rootDir": "./src/",
+        "removeComments": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": [
+        "./src/**/*"
+    ],
+    "exclude": [
+        "./src/**/*.spec.ts",
+        "./node_modules/**/*"
+    ]
+}
