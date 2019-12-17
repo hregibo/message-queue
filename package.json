@@ -1,0 +1,40 @@
+{
+  "name": "message-queue",
+  "version": "0.1.0",
+  "description": "A simple queue manager that allows sub-queues to have different delays",
+  "main": "index.js",
+  "scripts": {
+      "syntax": "tslint -c tslint.json 'src/**/*.ts'",
+      "build": "tsc",
+      "test": "jest",
+      "test:coverage": "jest --coverage",
+      "test:coverage:watch": "jest --coverage --watchAll",
+      "test:watch": "jest --watchAll"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@gitlab.com/hregibo/message-queue.git"
+  },
+  "keywords": ["queue", "message-queue", "multiple"],
+  "author": "Hugo 'Lumikkode' Regibo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://gitlab.com/hregibo/message-queue/issues"
+  },
+  "homepage": "https://gitlab.com/hregibo/message-queue#readme",
+  "dependencies": {
+      "bunyan": "^1.8.12",
+  },
+  "devDependencies": {
+      "@types/bunyan": "^1.8.6",
+      "@types/jest": "^24.0.15",
+      "@types/node": "^12.0.8",
+      "@typescript-eslint/parser": "^1.10.2",
+      "eslint": "^5.16.0",
+      "jest": "^24.8.0",
+      "ts-jest": "^24.0.2",
+      "ts-node": "^8.3.0",
+      "tslint": "^5.17.0",
+      "typescript": "^3.6.3"
+  }
+}
