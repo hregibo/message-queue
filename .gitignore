@@ -5,3 +5,4 @@ config.json
 /lib/*
 !/lib/.gitkeep
 /coverage/*
+*.tgz
