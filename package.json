@@ -6,7 +6,7 @@
     "private": false,
     "types": "lib/index.d.ts",
     "scripts": {
-        "prepublish": "npm run test && npm run build",
+        "prepare": "npm run test && npm run build",
         "syntax": "tslint -c tslint.json 'src/**/*.ts'",
         "build": "tsc",
         "test": "jest",
