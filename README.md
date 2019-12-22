@@ -259,22 +259,25 @@ import { SomeIrcLibrary } from "./client";
 const mq = new MessageQueue();
 const irc = new SomeIrcLibrary();
 
-mq.setQueue({
-    name: "command-queue",
-    priority: 1, // the commands are more important than anything else
-});
-
 // We set the polling timer to 60ms, which is the allowed rate for the bot
 MessageQueue.DEFAULT_QUEUE_POLLING_MS = 60;
 // We set the delay for each queue to be 1500 by default
 MessageQueue.DEFAULT_QUEUE_DELAY_MS = 1500;
 
+mq.setQueue({
+    name: "command-queue",
+    // the commands are more important than anything else
+    priority: 1,
+    // Giving the delay for the queue will override the default one
+    delay: MessageQueue.DEFAULT_QUEUE_POLLING_MS,
+});
+
 for(const channel of ChannelList) {
     // we create a queue for each channel we join
     mq.setQueue({
         name: channel.name,
-        // Giving the delay for the queue will override the default one
-        delay: MessageQueue.DEFAULT_QUEUE_POLLING_MS,
+        priority: 10,
+        // not providing the delay here will default to the one we set earlier (1500 ms)
     });
     // We add the channel JOIN request to the command queue
     mq.emit("enqueue", {
