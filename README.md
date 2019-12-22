@@ -46,6 +46,18 @@ mq.emit("stop");
 
 For more informations on the available events and examples, please scroll further below.
 
+
+## Static properties
+
+There are a bunch of static properties directly in MessageQueue that allow to define the default values of new queues:
+
+|Property|Description|
+|---|---|
+|`DEFAULT_QUEUE_PRIORITY`|This is the default priority for queues that are not created yet, but are still receiving an enqueue request. Lower is better.|
+|`DEFAULT_QUEUE_POLLING_MS`|This is the default polling delay for the MEssageQueue. Value is in milliseconds.|
+|`DEFAULT_QUEUE_DELAY_MS`|This is the default delay between two messages to be sent for one specific queue. Value is in milliseconds.|
+
+
 ## Events
 
 The message queue has the following events set up:
@@ -123,16 +135,179 @@ someMessageQueue.emit("stop");
 
 ## Methods
 
-s
+If you prefer to use directly the methods, you can do so by calling the methods directly. All methods are public.
 
-## Static properties
+### `onStop`
 
-s
+This method is the equivalent of emitting a  `stop` event.
 
-## Examples of usage
+```typescript
+someMessageQueue.onStop();
+```
 
-s
+### `onStart`
 
-## Contributing
+This method is the equivalent of emitting a `start` event.
 
-s
+```typescript
+someMessageQueue.onStart();
+```
+
+### `enqueue`
+
+puts a given message in a queue. If the queue does not exists yet, it will be created with the default values (which you can customize using the static properties). This method takes one argument, which is a QueueMessage.
+
+```typescript
+someMessageQueue.enqueue({
+    queue: "some-queue-name",
+    message: "Hello world",
+    priority: 100,
+});
+```
+
+### `onEnqueue`
+
+This is the method called when emitting a `enqueue` event. For now, it has no other use than calling the `enqueue` method, but that might change in the future, if some processing of the event data needs to be done.
+
+```typescript
+someMessageQueue.onEnqueue({
+    queue: "some-queue-name",
+    message: "Hello world",
+    priority: 100,
+});
+```
+
+### `setQueue`
+
+This method allows you to update the delay and priority of a existing queue, or create one if it does not exists yet.
+
+The only parameter is an object which contains 3 properties: `name` (the name of the queue), `delay` (the delay of the queue, in milliseconds) and `priority` (the priority of the queue compared to other queues).
+
+```typescript
+someMessageQueue.setQueue({
+    name: "some-message-queue",
+    delay: 1500,
+    priority: 10,
+});
+```
+
+### `onRemove`
+
+Same behaviour as calling the `remove` event. Takes a string (the queue name) as an argument.
+
+```typescript
+someMessageQueue.onRemove("some-queue-name");
+```
+
+### `onPurge`
+
+Same behaviour as calling the `purge` event. Takes a string (the queue name) as an argument.
+
+```typescript 
+someMessageQueue.onPurge("some-queue-name");
+```
+
+### `onQueueSet`
+
+Sets a queue with the new delay and priority, if specified. Takes an object as an argument, with the properties `name` (the queue name), `delay` (the delay between two messages in milliseconds, optional) and `priority` (the priority of the queue compared to other queues, in milliseconds, optional).
+
+```typescript
+someMessageQueue.onQueueSet({
+    name: "some-message-queue",
+    delay: 1350,
+    priority: 25,
+});
+```
+
+### `dequeue`
+
+Internal method. Used to trigger a search for the most important message to send, then emits a `dequeue` event. You should not use this method.
+
+### `orderByPriority`
+
+Internal utility method. Takes a list of IPriorityObject and sorts them to always have the lowest priority first in the array. You might want to use it if you need to sort an array of objects having the `priority` property.
+
+```typescript
+const myMessages = [
+    {id: 1, priority: 10},
+    {id: 2, priority: 3},
+    {id: 3, priority: 7},
+    {id: 4, priority: 1},
+];
+const orderedMessageList = someMessageQueue.orderByPriority(myMessages);
+// [ {id: 4, priority: 1}, {id: 2, priority: 3}, {id: 3, priority: 7}, {id: 1, priority: 10}]
+```
+
+### `getElligibleMessage`
+
+Finds the first elligible message for a given queue, or undefined if none matches.
+
+```typescript
+const elligibleMessage = someMessageQueue.getElligibleMessage(someQueue);
+```
+
+
+## Example of usage
+
+This library is made at the very beginning for a IRC client I created. The reason we have a global delay and per-queue delay is that the IRC client is limited in the number of messages we can send every 30 seconds, while each channel you join has a limitation based on your status (moderator has no limit, others can post one message every 1500ms). The following example shows a basic implementation for an IRC client:
+
+```typescript
+import { MessageQueue } from "@hregibo/message-queue";
+import { ChannelList } from "./channels";
+import { SomeIrcLibrary } from "./client";
+
+const mq = new MessageQueue();
+const irc = new SomeIrcLibrary();
+
+mq.setQueue({
+    name: "command-queue",
+    priority: 1, // the commands are more important than anything else
+});
+
+// We set the polling timer to 60ms, which is the allowed rate for the bot
+MessageQueue.DEFAULT_QUEUE_POLLING_MS = 60;
+// We set the delay for each queue to be 1500 by default
+MessageQueue.DEFAULT_QUEUE_DELAY_MS = 1500;
+
+for(const channel of ChannelList) {
+    // we create a queue for each channel we join
+    mq.setQueue({
+        name: channel.name,
+        // Giving the delay for the queue will override the default one
+        delay: MessageQueue.DEFAULT_QUEUE_POLLING_MS,
+    });
+    // We add the channel JOIN request to the command queue
+    mq.emit("enqueue", {
+        queue: "command-queue",
+        message: `JOIN #${channel.name}`,
+        priority: 5,
+    });
+}
+
+mq.on("dequeue", (record) => {
+    // Whenever a message is dequeued, we send it via IRC
+    irc.send(record.message);
+})
+
+irc.on("ready", () => {
+    // The IRC client is connected and authenticatedmess
+    // We start the polling of the queue
+    mq.emit("start");
+});
+
+irc.on("disconnect", () => {
+    mq.emit("stop");
+});
+
+irc.on("message", (msg) => {
+    if (msg.content === "!hello") {
+        // The user used the hello command, we say hello back!
+        mq.emit("enqueue", {
+            // msg.channel is the name of the channel, i.e. #hregibo
+            queue: msg.channel,
+            message: `PRIVMSG #${msg.channel} :Hello there, ${msg.user.name}!`,
+            priority: 100,
+        });
+    }
+});
+```
