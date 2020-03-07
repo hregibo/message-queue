@@ -249,7 +249,7 @@ const elligibleMessage = someMessageQueue.getElligibleMessage(someQueue);
 
 ## Example of usage
 
-This library is made at the very beginning for a IRC client I created. The reason we have a global delay and per-queue delay is that the IRC client is limited in the number of messages we can send every 30 seconds, while each channel you join has a limitation based on your status (moderator has no limit, others can post one message every 1500ms). The following example shows a basic implementation for an IRC client:
+This library is made at the very beginning for a IRC client I created. The reason we have a global delay and per-queue delay is that the IRC client is limited in the number of messages we can send every 30 seconds, while each channel you join has a limitation based on your status (moderator has no limit, others can post one message every 1500ms). The following example shows a basic implementation for an IRC client, using events:
 
 ```typescript
 import { MessageQueue } from "@hregibo/message-queue";
@@ -313,4 +313,42 @@ irc.on("message", (msg) => {
         });
     }
 });
+```
+
+Same example as before, but this time without using the automatic polling that is available:
+
+```typescript
+import { MessageQueue } from "@hregibo/message-queue";
+import { ChannelList } from "./channels";
+import { SomeIrcLibrary } from "./client";
+
+const mq = new MessageQueue();
+const irc = new SomeIrcLibrary();
+
+// We set the delay for each queue to be 1500 by default
+MessageQueue.DEFAULT_QUEUE_DELAY_MS = 1500;
+
+mq.setQueue({
+    name: "greetings",
+    priority: 1,
+});
+
+irc.on("message", (msg) => {
+    if (msg.content === "!hello") {
+        // The user used the hello command, we say hello back!
+        mq.enqueue({
+            // msg.channel is the name of the channel, i.e. #hregibo
+            queue: "greetings",
+            message: `PRIVMSG #${msg.channel} :Hello there, ${msg.user.name}!`,
+        });
+    }
+});
+
+setInterval(() => {
+    // this is an example of polling regularly
+    const validMessage = mq.dequeue();
+    if (validMessage) {
+        irc.send(validMessage.message);
+    }
+}, 15000); // every 15 secs we do that code
 ```

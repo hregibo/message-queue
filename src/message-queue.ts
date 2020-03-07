@@ -11,6 +11,7 @@ export interface IQueue {
     sent_at: number;
     delay: number;
     priority: number;
+    constraints?: QueueConstraints;
 }
 export interface IPriorityObject {
     priority: number;
@@ -24,6 +25,7 @@ export interface IQueueCreationOptions {
     name: string;
     delay?: number;
     priority?: number;
+    constraints?: QueueConstraints;
 }
 /**
  * A message inside a IQueue.
@@ -34,6 +36,8 @@ export interface IQueueMessage {
     queue: string;
     priority: number;
 }
+
+export type QueueConstraints = string[];
 
 export class MessageQueue extends EventEmitter {
     // Defaults for the class so that users can edit it
@@ -147,13 +151,14 @@ export class MessageQueue extends EventEmitter {
      * and will take into account the required delay between messages
      * for each queues.
      */
-    public dequeue(): void {
-        const elligibleQueue = this.getElligibleQueue();
+    public dequeue(constraints?: QueueConstraints): IQueueMessage|undefined {
+        const elligibleQueue = this.getElligibleQueue(constraints);
         if (!elligibleQueue) {
             return;
         }
         const dequeuedMessage = this.getElligibleMessage(elligibleQueue);
         this.emit("dequeue", dequeuedMessage);
+        return dequeuedMessage;
     }
     public orderByPriority(unorderedArray: IPriorityObject[]): IPriorityObject[] {
         return unorderedArray.sort((a, b) => {
@@ -167,7 +172,24 @@ export class MessageQueue extends EventEmitter {
         const dequeuedMessage = selectedQueue.queue.shift();
         return dequeuedMessage;
     }
-    public getElligibleQueue(): IQueue | undefined {
+    public matchesConstraints(queue: IQueue, constraints: QueueConstraints): boolean {
+        // the queue can have MORE constraints than those required
+        // but the queue can NEVER match a list of constraints that has more than what she has
+        // tl;dr ALL constraints must be satisfied, but extra queue constraints are not an issue
+        if (constraints.length === 0 && queue.constraints?.length === 0) {
+            return true;
+        }
+        if (constraints.length > (queue.constraints?.length || 0)) {
+            return false;
+        }
+        for (const constraint of constraints) {
+            if (!queue.constraints?.includes(constraint)) {
+                return false;
+            }
+        }
+        return false;
+    }
+    public getElligibleQueue(constraints?: QueueConstraints): IQueue | undefined {
         const queueIterator = this.queues.values();
         const currentTimestamp = Date.now();
         let mostValuableQueue: IQueue | undefined;
@@ -178,6 +200,8 @@ export class MessageQueue extends EventEmitter {
                 continue;
             } else if (!queue.queue.length) {
                 // This queue is empty, we skip it
+                continue;
+            } else if (constraints && !this.matchesConstraints(queue, constraints)) {
                 continue;
             } else if (!mostValuableQueue) {
                 // We do not have any queue ready yet, we assign this one by default
